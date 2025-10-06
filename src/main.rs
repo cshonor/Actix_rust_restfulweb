@@ -1,48 +1,50 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use uuid::Uuid;
+use dotenv::dotenv;
+use sqlx::PgPool;
+use std::env;
 
-// 数据模型
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct User {
-    id: String,
-    name: String,
-    email: String,
-}
+mod config;
+mod models;
+mod database;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct CreateUser {
-    name: String,
-    email: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct UpdateUser {
-    name: Option<String>,
-    email: Option<String>,
-}
+use config::Config;
+use database::Database;
+use models::{UserResponse, CreateUser, UpdateUser};
 
 // 应用状态
 struct AppState {
-    users: Mutex<HashMap<String, User>>,
+    db: Database,
 }
 
 // 处理器函数
 async fn get_users(data: web::Data<AppState>) -> Result<HttpResponse> {
-    let users = data.users.lock().unwrap();
-    let users_list: Vec<User> = users.values().cloned().collect();
-    Ok(HttpResponse::Ok().json(users_list))
+    match data.db.get_all_users().await {
+        Ok(users) => {
+            let users_response: Vec<UserResponse> = users.into_iter().map(|u| u.into()).collect();
+            Ok(HttpResponse::Ok().json(users_response))
+        }
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Internal server error"
+            })))
+        }
+    }
 }
 
 async fn get_user(path: web::Path<String>, data: web::Data<AppState>) -> Result<HttpResponse> {
-    let users = data.users.lock().unwrap();
-    match users.get(&path.into_inner()) {
-        Some(user) => Ok(HttpResponse::Ok().json(user)),
-        None => Ok(HttpResponse::NotFound().json(serde_json::json!({
+    let id = path.into_inner();
+    match data.db.get_user_by_id(&id).await {
+        Ok(Some(user)) => Ok(HttpResponse::Ok().json(UserResponse::from(user))),
+        Ok(None) => Ok(HttpResponse::NotFound().json(serde_json::json!({
             "error": "User not found"
         }))),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Internal server error"
+            })))
+        }
     }
 }
 
@@ -50,17 +52,15 @@ async fn create_user(
     user_data: web::Json<CreateUser>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse> {
-    let id = Uuid::new_v4().to_string();
-    let user = User {
-        id: id.clone(),
-        name: user_data.name.clone(),
-        email: user_data.email.clone(),
-    };
-    
-    let mut users = data.users.lock().unwrap();
-    users.insert(id.clone(), user.clone());
-    
-    Ok(HttpResponse::Created().json(user))
+    match data.db.create_user(user_data.into_inner()).await {
+        Ok(user) => Ok(HttpResponse::Created().json(UserResponse::from(user))),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Internal server error"
+            })))
+        }
+    }
 }
 
 async fn update_user(
@@ -69,33 +69,33 @@ async fn update_user(
     data: web::Data<AppState>,
 ) -> Result<HttpResponse> {
     let id = path.into_inner();
-    let mut users = data.users.lock().unwrap();
-    
-    match users.get_mut(&id) {
-        Some(user) => {
-            if let Some(name) = &user_data.name {
-                user.name = name.clone();
-            }
-            if let Some(email) = &user_data.email {
-                user.email = email.clone();
-            }
-            Ok(HttpResponse::Ok().json(user.clone()))
-        }
-        None => Ok(HttpResponse::NotFound().json(serde_json::json!({
+    match data.db.update_user(&id, user_data.into_inner()).await {
+        Ok(Some(user)) => Ok(HttpResponse::Ok().json(UserResponse::from(user))),
+        Ok(None) => Ok(HttpResponse::NotFound().json(serde_json::json!({
             "error": "User not found"
         }))),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Internal server error"
+            })))
+        }
     }
 }
 
 async fn delete_user(path: web::Path<String>, data: web::Data<AppState>) -> Result<HttpResponse> {
     let id = path.into_inner();
-    let mut users = data.users.lock().unwrap();
-    
-    match users.remove(&id) {
-        Some(_) => Ok(HttpResponse::NoContent().finish()),
-        None => Ok(HttpResponse::NotFound().json(serde_json::json!({
+    match data.db.delete_user(&id).await {
+        Ok(true) => Ok(HttpResponse::NoContent().finish()),
+        Ok(false) => Ok(HttpResponse::NotFound().json(serde_json::json!({
             "error": "User not found"
         }))),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Internal server error"
+            })))
+        }
     }
 }
 
@@ -109,13 +109,34 @@ async fn health_check() -> Result<HttpResponse> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("🚀 Starting Actix Web RESTful Server...");
+    // 加载环境变量
+    dotenv().ok();
+    
+    // 设置日志
+    env_logger::init();
+    
+    println!("🚀 Starting Actix Web RESTful Server with Database...");
+    
+    // 加载配置
+    let config = Config::from_env().expect("Failed to load configuration");
+    
+    // 创建数据库连接池
+    let pool = PgPool::connect(&config.database_url)
+        .await
+        .expect("Failed to connect to database");
+    
+    // 运行数据库迁移
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run database migrations");
     
     let app_state = web::Data::new(AppState {
-        users: Mutex::new(HashMap::new()),
+        db: Database::new(pool),
     });
 
-    println!("📡 Server will be available at: http://localhost:8081");
+    let server_url = format!("http://{}:{}", config.host, config.port);
+    println!("📡 Server will be available at: {}", server_url);
     println!("🔗 Available endpoints:");
     println!("  GET    /health           - Health check");
     println!("  GET    /api/users        - Get all users");
@@ -123,6 +144,7 @@ async fn main() -> std::io::Result<()> {
     println!("  POST   /api/users        - Create new user");
     println!("  PUT    /api/users/{{id}}   - Update user");
     println!("  DELETE /api/users/{{id}}   - Delete user");
+    println!("🗄️  Database: PostgreSQL with connection pooling");
 
     HttpServer::new(move || {
         App::new()
@@ -137,7 +159,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/users/{id}", web::delete().to(delete_user)),
             )
     })
-    .bind("127.0.0.1:8081")?
+    .bind(format!("{}:{}", config.host, config.port))?
     .run()
     .await
 }

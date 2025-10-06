@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: actix_postgres
+    environment:
+      POSTGRES_DB: actix_rust_db
+      POSTGRES_USER: actix_user
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - actix_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U actix_user -d actix_rust_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Actix Web 应用
+  app:
+    build: .
+    container_name: actix_app
+    environment:
+      DATABASE_URL: postgresql://actix_user:secure_password_123@postgres:5432/actix_rust_db
+      HOST: 0.0.0.0
+      PORT: 8081
+      RUST_LOG: info
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - actix_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 可选：数据库管理工具
+  adminer:
+    image: adminer:4.8.1
+    container_name: actix_adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - actix_network
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  actix_network:
+    driver: bridge
