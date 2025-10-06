@@ -14,3 +14,20 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenv = "0.15"
 anyhow = "1.0"
 env_logger = "0.10"
+
+# 安全框架依赖
+# 身份认证和授权
+jsonwebtoken = "9.2"
+argon2 = "0.5"
+
+# 加密和安全
+ring = "0.17"
+aes-gcm = "0.10"
+chacha20poly1305 = "0.10"
+
+# Web 安全
+actix-cors = "0.6"
+cookie = "0.18"
+
+# 输入验证
+validator = { version = "0.18", features = ["derive"] }
