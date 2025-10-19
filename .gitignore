@@ -1,0 +1,16 @@
+# Rust 编译结果
+/target/
+**/*.rs.bk
+
+# Cargo 锁文件（可选，通常提交）
+# Cargo.lock
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
