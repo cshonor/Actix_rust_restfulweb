@@ -1,13 +1,21 @@
 use actix_web::{web, App, HttpServer, Responder, HttpRequest, HttpResponse};
 use actix_web::dev::Server;
 use std::net::TcpListener;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct Subscriber {
+    pub name: String,
+    pub email: String,
+}
 
 pub async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");
     format!("Hello, {}!", name)
 }
 
-pub async fn subscribe(req: HttpRequest) -> impl Responder {
+pub async fn subscribe(req: HttpRequest, form: web::Form<Subscriber>) -> impl Responder {
+    
     HttpResponse::Ok().finish()
 }
 pub async fn health_check(req: HttpRequest) -> impl Responder {
