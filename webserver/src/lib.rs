@@ -13,7 +13,10 @@ HttpResponse::Ok()
 pub async fn run() -> Result<(), std::io::Error> {
     HttpServer::new(|| {
        
-    create_app().await})
+        App::new()
+        .route("/", web::get().to(greet))
+        .route("/{name}", web::get().to(greet))
+        .route("/health", web::get().to(health_check))})
     .bind("127.0.0.1:8080")
     .unwrap()
     .run()
@@ -21,8 +24,9 @@ pub async fn run() -> Result<(), std::io::Error> {
 }
 
 pub  async fn create_app() -> App {
+       
     App::new()
-.route("/", web::get().to(greet))
-.route("/{name}", web::get().to(greet))
-.route("/health", web::get().to(health_check))
+    .route("/", web::get().to(greet))
+    .route("/{name}", web::get().to(greet))
+    .route("/health", web::get().to(health_check))
 }
