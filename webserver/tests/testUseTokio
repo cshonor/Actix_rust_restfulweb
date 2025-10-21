@@ -1,1 +1,12 @@
 #[tokio::test]
+async fn health (){
+    spawn_app().await.expect("Failed to run server");
+    let client =  reqwest::Client::new();
+    let resp = client.get("http://127.0.0.1:8080/health").send().await.expect("Failed to send request");
+    assert_eq!(resp.status(), 200);
+}
+//this is a use from lib.rs
+async fn spawn_app() -> Result<(), std::io::Error>{
+  webserver::run().await()?
+
+}
