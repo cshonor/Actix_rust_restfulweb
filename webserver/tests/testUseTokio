@@ -1,20 +1,21 @@
 #[tokio::test]
 async fn health (){
-    spawn_app();
+    let app_address = spawn_app();
     let client =  reqwest::Client::new();
-    let resp = client.get("http://127.0.0.1:8080/health").send().await.expect("Failed to send request");
+    let resp = client.get(&format!("{}/health", &app_address)).send().await.expect("Failed to send request");
     assert_eq!(resp.status(), 200);
 }
 //this is a use from lib.rs
- fn spawn_app() {
+ fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
     let server = webserver::run(listener).expect("Failed to run server");
     let _ = tokio::spawn(async move {
         server.await.unwrap();
     });
-    format!("http://127.0.0.1:{}", port)
+    format!("http://127.0.0.1:{}", port)  
 }
+
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data(){
     let app_address = spawn_app();
