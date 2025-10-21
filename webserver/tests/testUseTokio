@@ -24,3 +24,18 @@ async fn subscribe_returns_a_200_for_valid_form_data(){
     let resp = client.post(&format!("{}/subscribe", &app_address)).header("Content-Type", "application/x-www-form-urlencoded").body(body).send().await.expect("Failed to send request");
     assert_eq!(resp.status(), 200);
 }
+#[tokio::test]
+async fn subscribe_returns_a_400_when_data_is_missing(){
+    let app_address = spawn_app();
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        ("name=le%20guin", "missing the email"),
+        ("email=ursula_le_guin%40gmail.com", "missing the name"),
+        ("", "missing both name and email"),
+    ];
+    for (invalid_body, error_message) in test_cases {
+        let resp = client.post(&format!("{}/subscribe", &app_address)).header("Content-Type", "application/x-www-form-urlencoded").body(invalid_body).send().await.expect("Failed to send request");
+        assert_eq!(resp.status(), 400);
+        assert_eq!(resp.text().await.unwrap(), format!("'{}' field is required", error_message));
+    }
+}
