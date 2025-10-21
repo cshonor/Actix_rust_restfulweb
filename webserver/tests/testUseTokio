@@ -7,9 +7,11 @@ async fn health (){
 }
 //this is a use from lib.rs
  fn spawn_app() {
-    let server = webserver::run().expect("Failed to run server");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+    let port = listener.local_addr().unwrap().port();
+    let server = webserver::run(listener).expect("Failed to run server");
     let _ = tokio::spawn(async move {
         server.await.unwrap();
     });
-
+    format!("http://127.0.0.1:{}", port)
 }
