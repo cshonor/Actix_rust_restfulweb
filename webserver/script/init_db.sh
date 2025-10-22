@@ -4,8 +4,8 @@ set -eo pipefail
 
 # 检查是否已设置自定义用户名。如果未设置，则默认是"postgres"
 DB_USER=${POSTGRES_USER:=postgres}
-# 检查是否已设置自定义密码。如果未设置，则默认是"password"
-DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
+# 检查是否已设置自定义密码。如果未设置，则默认是"123456"
+DB_PASSWORD="${POSTGRES_PASSWORD:=123456}"
 # 检查是否已设置自定义数据库名称。如果未设置，则默认是"newsletter"
 DB_NAME="${POSTGRES_DB:=newsletter}"
 # 检查是否已设置自定义数据库端口。如果未设置，则默认是"5432"
