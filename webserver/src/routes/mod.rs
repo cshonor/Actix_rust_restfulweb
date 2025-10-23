@@ -1,7 +1,7 @@
-mod subscriptions;
+mod subscribe;
 mod health;
 mod greet;
 
-pub use subscriptions::*;   
+pub use subscribe::*;   
 pub use health::*;   
 pub use greet::*;   
