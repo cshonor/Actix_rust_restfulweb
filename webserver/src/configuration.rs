@@ -17,13 +17,3 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
    .build()?
    .try_deserialize::<Settings>()
 }
-pub struct Settings {
-    pub database: DatabaseSettings,
-}
-pub struct DatabaseSettings {
-    pub username: String,
-    pub password: String,
-    pub port: u16,
-    pub host: String,
-    pub database_name: String,
-}
