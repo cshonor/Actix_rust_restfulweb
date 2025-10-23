@@ -7,8 +7,7 @@ pub  fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
     let settings = get_configuration().expect("Failed to load configuration");
     let address = format!("127.0.0.1:{}", settings.application_port);
     
-    let server = HttpServer::new(|| {
-        
+    let server = HttpServer::new(|| {  
          App::new()
          .route("/", web::get().to(greet))
          .route("/{name}", web::get().to(greet))
