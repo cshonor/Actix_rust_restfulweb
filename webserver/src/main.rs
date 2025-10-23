@@ -4,6 +4,6 @@ use webserver::startup::run;
  async fn main() -> std::io::Result<()> {
 
    run().await?;
-   
+   Ok(())
 }
 

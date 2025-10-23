@@ -13,10 +13,11 @@ pub struct DatabaseSettings {
     pub database_name: String,
 }
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    let mut settings = config::Config::builder();
-    settings.add_source(config::File::new("configuration.yaml", config::FileFormat::Yaml));
+    let  settings = config::Config::builder()
+   .add_source(config::File::new("configuration.yaml", config::FileFormat::Yaml))
    .build()?
-   .try_deserialize::<Settings>()
+   .try_deserialize::<Settings>()?;
+   Ok(settings)
 }
 impl DatabaseSettings {
     pub fn connection_string(&self) -> String {
