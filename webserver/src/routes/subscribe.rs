@@ -9,17 +9,20 @@ pub struct Subscriber {
     pub email: String,
 }
 pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: web::Data<PgPool>) -> impl Responder {
-    log::info!("request body: {:?}", form); 
+ 
+    let request_id = Uuid::new_v4();
+    log::info!(" request_id: {} request body: {:?}", request_id, form);
+    
     match sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
-    , Uuid::new_v4(), form.email, form.name, chrono::Utc::now())
+    , request_id, form.email, form.name, chrono::Utc::now())
     .execute(db_pool.get_ref()).await
     {
         Ok(_)=>{
-            log::info!("Subscription successful"); 
+            log::info!(" request_id: {} Subscription successful", request_id); 
             HttpResponse::Ok().finish()
         },
         Err(e)=>{
-            log::error!("Failed to subscribe: {}", e);
+            log::error!(" request_id: {} Failed to subscribe: {}", request_id, e);
             HttpResponse::InternalServerError().finish()
         }
     }
