@@ -9,6 +9,7 @@ pub struct Subscriber {
     pub email: String,
 }
 pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: web::Data<PgPool>) -> impl Responder {
+    
     let request_id = Uuid::new_v4();
     let span = tracing::info_span!("subscribe",{
         "request_id" => %request_id,
@@ -18,7 +19,6 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
 
     let _enter = span.enter();
     tracing::info!(" request_id: {} request body: {:?}", request_id, form);
-    
     match sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
     , request_id, form.email, form.name, chrono::Utc::now())
     .execute(db_pool.get_ref()).await
