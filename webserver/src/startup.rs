@@ -9,8 +9,8 @@ use tracing_subscriber::set_global_default;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{Registry, EnvFilter};
-use tracing_bunyan_formmatter::{BunyanFormattingLayer, JsonStorageLayer};
-use actix_web_tracing::TracingLogger;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_actix_web::TracingLogger;
 
 
 pub  fn run(listener: TcpListener, db_pool:PgPool) -> Result<Server, std::io::Error> {
