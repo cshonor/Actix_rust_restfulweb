@@ -10,6 +10,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{Registry, EnvFilter};
 use tracing_bunyan_formmatter::{BunyanFormattingLayer, JsonStorageLayer};
+use actix_web_tracing::TracingLogger;
 
 
 pub  fn run(listener: TcpListener, db_pool:PgPool) -> Result<Server, std::io::Error> {
@@ -22,7 +23,7 @@ pub  fn run(listener: TcpListener, db_pool:PgPool) -> Result<Server, std::io::Er
         let db_pool = web::Data::new(db_pool);
         let server = HttpServer::new(|| {  
          App::new()
-         .wrap(middleware::Logger::default())
+         .wrap(TracingLogger::default())
          .route("/", web::get().to(greet))  
          .route("/{name}", web::get().to(greet))
          .route("/health", web::get().to(health_check))
