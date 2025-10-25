@@ -22,17 +22,18 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
     let _enter = span.enter();
     tracing::info!(" request_id: {} request body: {:?}", request_id, form);
 
-    tracing::
+
+    let db_span = tracing::info_span!("subscribe_db"    );
     match sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
     , request_id, form.email, form.name, chrono::Utc::now())
-    .execute(db_pool.get_ref()).await
+    .execute(db_pool.get_ref()).instrument(db_span).await
     {
         Ok(_)=>{
-            tracing::info!(" request_id: {} Subscription successful", request_id); 
+            tracing::info!(request_id => %request_id, " Subscription successful"); 
             HttpResponse::Ok().finish()
         },
         Err(e)=>{
-            tracing::error!(" request_id: {} Failed to subscribe: {}", request_id, e);
+            tracing::error!(request_id => %request_id, " Failed to subscribe: {}", e);
             HttpResponse::InternalServerError().finish()
         }
     }

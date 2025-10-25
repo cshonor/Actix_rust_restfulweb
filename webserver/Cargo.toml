@@ -16,7 +16,7 @@ chrono = "0.4.15"
 uuid = { version   ="1" , features=["v4"]}
 tracing = { version = "0.1" , features = ["log"]}
 tracing-subscriber = { version = "0.3" , features = ["registry","env-filter"]}
-
+tracing-bunyan-formmatter = "0.3"
 [lib]
 name = "webserver"
 path = "src/lib.rs"
