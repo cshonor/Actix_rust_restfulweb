@@ -3,6 +3,8 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::Utc;
+use tracing::Instrument;
+
 #[derive(Deserialize)]
 pub struct Subscriber {
     pub name: String,
@@ -19,6 +21,8 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
 
     let _enter = span.enter();
     tracing::info!(" request_id: {} request body: {:?}", request_id, form);
+
+    tracing::
     match sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
     , request_id, form.email, form.name, chrono::Utc::now())
     .execute(db_pool.get_ref()).await

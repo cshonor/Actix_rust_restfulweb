@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Rust
+target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files
+tests/
+
+# Documentation
+README.md
+*.md
+
+# Scripts (except init_db.sh which might be needed)
+script/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml

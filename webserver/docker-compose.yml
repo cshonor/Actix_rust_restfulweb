@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: newsletter
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # Rust Web 应用
+  webserver:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+      - DATABASE_URL=postgres://postgres:123456@postgres:5432/newsletter
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/app/migrations:ro
+    command: >
+      sh -c "
+        echo '等待数据库启动...' &&
+        sleep 10 &&
+        echo '运行数据库迁移...' &&
+        sqlx migrate run &&
+        echo '启动应用程序...' &&
+        ./webserver
+      "
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
