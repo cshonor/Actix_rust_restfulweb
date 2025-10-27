@@ -13,7 +13,7 @@ pub struct Subscriber {
 #[tracing::instrument(
     name = "Adding a new subscriber", 
     skip(form, db_pool),
-    fields(request_id = %Uuid::new_v4(),email = %form.email,name = %form.name))]
+    fields(email = %form.email,name = %form.name))]
 pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: web::Data<PgPool>) -> impl Responder {
     
     match insert_subscriber(&db_pool, &form).await
@@ -26,7 +26,9 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
         }
     }
 }
-#[tracing::instrument(name = "Inserting a new subscriber", skip(form, db_pool),fields(request_id = %Uuid::new_v4(),email = %form.email,name = %form.name))]
+#[tracing::instrument(name = "Inserting a new subscriber", 
+skip(form, db_pool),
+fields(email = %form.email,name = %form.name))]
 
 pub async fn insert_subscriber(db_pool: &PgPool, form:&Subscriber) -> Result<(), sqlx::Error> {
     sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"

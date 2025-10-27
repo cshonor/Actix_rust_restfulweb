@@ -7,7 +7,7 @@ edition = "2021"
 actix-web = "4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 reqwest = { version = "0.11", features = ["json"] }
-sqlx = { version = "0.6", features = ["runtime-actix-rustls","macros","uuid","migrate","chrono", "postgres"] }
+sqlx = { version = "0.6", features = ["runtime-actix-rustls","macros","uuid","migrate","chrono", "postgres","offline"] }
 
 serde = { version = "1.0", features = ["derive"] }  
 
