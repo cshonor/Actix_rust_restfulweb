@@ -8,7 +8,6 @@ use tracing_actix_web::TracingLogger;
 
 pub  fn run(listener: TcpListener, db_pool:PgPool) -> Result<Server, std::io::Error> {
         let settings = get_configuration().expect("Failed to load configuration");
-        let address = format!("127.0.0.1:{}", settings.application.port);
         let db_pool = web::Data::new(db_pool);
         let server = HttpServer::new(move || {  
          App::new()

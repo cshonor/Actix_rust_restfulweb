@@ -2,8 +2,6 @@ use serde::Deserialize;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::Utc;
-use tracing::Instrument;
 
 #[derive(Deserialize, Debug)]
 pub struct Subscriber {
@@ -32,10 +30,11 @@ fields(email = %form.email,name = %form.name))]
 
 pub async fn insert_subscriber(db_pool: &PgPool, form:&Subscriber) -> Result<(), sqlx::Error> {
     sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
-    , Uuid::new_v4(), email, name, chrono::Utc::now())
-    .execute(db_pool.get_ref()).await
+    , Uuid::new_v4(), form.email, form.name, chrono::Utc::now())
+    .execute(db_pool).await
     .map_err(|e| {
         tracing::error!("Failed to insert subscriber: {}", e);
         e
-    })
+    })?;
+    Ok(())
 }

@@ -1,10 +1,9 @@
-use crate::startup::run;
-use crate::configuration::get_configuration;
+use webserver::startup::run;
+use webserver::configuration::get_configuration;
 use sqlx::{PgPool};
 use std::net::TcpListener;
 use tracing_subscriber::{EnvFilter};
-use crate::routes::telemetry::{get_subscriber, init_subscriber};
-use tracing_subscriber::fmt::MakeWriter;
+use webserver::routes::telemetry::{get_subscriber, init_subscriber};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
