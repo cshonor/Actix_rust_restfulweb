@@ -5,10 +5,11 @@ use std::net::TcpListener;
 use tracing_subscriber::{EnvFilter};
 use webserver::routes::telemetry::{get_subscriber, init_subscriber};
 use secrecy::ExposeSecret;
+
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
 
-    let subscriber = get_subscriber("webserver".into(), EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),std::io::stdout);
+    let subscriber = get_subscriber("webserver".into(), "info".to_string(), std::io::stdout);
     init_subscriber(subscriber);
 
     let settings=get_configuration().expect("Failed to get configuration");

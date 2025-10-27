@@ -1,7 +1,7 @@
-mod subscribe;
-mod health;
-mod greet;
-mod telemetry;
+pub mod subscribe;
+pub mod health;
+pub mod greet;
+pub mod telemetry;
 
 pub use subscribe::*;   
 pub use health::*;   
