@@ -1,6 +1,7 @@
 use config::{Config, ConfigError, File, Environment as ConfigEnvironment};
 use serde::Deserialize;
 use secrecy::{Secret, ExposeSecret};
+use serde_aux::field_attributes::deserialize_number_from_string;
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
@@ -11,18 +12,21 @@ pub struct Settings {
 pub struct DatabaseSettings {
     pub username: String,
     pub password: Secret<String>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: Secret<String>,
     pub database_name: Secret<String>,
+    pub require_ssl: bool
 }
 
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 pub struct ApplicationSettings {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub enum AppEnvironment {
     Local,
     Production,
@@ -61,6 +65,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     let settings = config::Config::builder()
     .add_source(config::File::from(configuration_directory.join(&environment_filename)))
     .add_source(config::File::from(configuration_directory.join("base.yaml")))
+    .add_source(ConfigEnvironment::with_prefix("APP").prefix_separator("_").separator("__"))
     .build()?
     .try_deserialize::<Settings>()?;
     Ok(settings)
@@ -73,5 +78,24 @@ impl DatabaseSettings {
     }
     pub fn connection_string_without_db(&self) -> Secret<String> {
         Secret::new(format!("postgres://{}:{}@{}:{}", self.username, self.password.expose_secret(), self.host.expose_secret(), self.port))
+    }
+    pub fn without_db(&self) -> pgpooloptions::Builder {
+        let ssl_mode = if self.require_ssl {
+            pgpooloptions::SslMode::Require
+        } else {
+            pgpooloptions::SslMode::Prefer
+        };
+        pgpooloptions::Builder::new()
+        .host(&self.host.expose_secret())
+        .port(self.port)
+        .username(&self.username)
+        .password(&self.password.expose_secret())
+        .ssl_mode(ssl_mode)
+    }   
+    pub fn with_db(&self) -> pgpooloptions::Builder {
+ let mut options =  self.without_db().database_name(&self.database_name.expose_secret());
+ options.log_statements(tracing::log::LevelFilter::TRACE);
+ options
+
     }
 }   
