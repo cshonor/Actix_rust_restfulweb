@@ -1,0 +1,16 @@
+{
+  "query": "INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "796fc38d9e3fc09e001768fc37aea88b02d8b16a28da800d7a9479ea117d8653"
+}
