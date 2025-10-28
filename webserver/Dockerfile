@@ -1,4 +1,4 @@
-FROM rust:1.59-slim-bullseye 
+FROM rust:1.70-slim-bullseye
 WORKDIR /app
 RUN apt update && apt install lld clang -y
 COPY . .
