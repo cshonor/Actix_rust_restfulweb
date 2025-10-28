@@ -17,13 +17,17 @@ services:
   envs:
   - key: APP_ENVIRONMENT
     value: production
+    scope: RUN_TIME
   - key: RUST_LOG
     value: info
+    scope: RUN_TIME
   - key: DATABASE_URL
     value: ${db.CONNECTIONSTRING}
     type: SECRET
+    scope: RUN_TIME
   - key: SQLX_OFFLINE
     value: "true"
+    scope: BUILD_TIME
 databases:
 - name: db
   engine: PG
