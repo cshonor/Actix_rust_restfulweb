@@ -1,0 +1,35 @@
+name: actix-webserver
+services:
+- name: webserver
+  source_dir: /
+  github:
+    repo: cshonor/Actix_rust_restfulweb
+    branch: main
+  run_command: ./target/release/webserver
+  environment_slug: rust
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8080
+  routes:
+  - path: /
+  health_check:
+    http_path: /health
+  envs:
+  - key: APP_ENVIRONMENT
+    value: production
+  - key: RUST_LOG
+    value: info
+  - key: DATABASE_URL
+    value: ${db.CONNECTIONSTRING}
+    type: SECRET
+  - key: SQLX_OFFLINE
+    value: "true"
+databases:
+- name: db
+  engine: PG
+  version: "13"
+  size: db-s-dev-database
+  num_nodes: 1
+  users:
+  - name: postgres
+    password: ${db.PASSWORD}
