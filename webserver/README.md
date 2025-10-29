@@ -2,6 +2,7 @@
 
 一个基于 Actix Web 框架构建的现代化 Rust Web 服务器项目，提供健康检查、用户订阅、问候功能和完整的日志追踪系统。支持多环境配置和 DigitalOcean App Platform 部署。
 
+
 ## 功能特性
 
 - 🚀 基于 Actix Web 4.x 的高性能异步 Web 服务器
