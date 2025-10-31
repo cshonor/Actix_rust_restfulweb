@@ -26,12 +26,10 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
         //form.0：form是一个web::Form<Subscriber>类型的实例，它是一个元组结构体。
         //正因为它是元组结构体，且内部只有一个字段（索引为0），所以必须通过.0来访问其内部真正的T实例（这里就是Subscriber）
         email: form.0.email,
-        name: SubscriberName::parse(form.0.name),
+        name: SubscriberName::parse(form.0.name).expect("Failed to parse subscriber name"),
     };
-    match insert_subscriber(&db_pool, &new_subscriber).await {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::InternalServerError().finish(),
-    }
+    insert_subscriber(&db_pool, &new_subscriber).await.map_err(|_| HttpResponse::InternalServerError().finish())?;
+    HttpResponse::Ok().finish()
 }
 #[tracing::instrument(name = "Inserting a new subscriber", 
 skip(form, db_pool),
