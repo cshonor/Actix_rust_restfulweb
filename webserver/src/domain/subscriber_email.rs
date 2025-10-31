@@ -23,9 +23,11 @@ impl std::fmt::Display for SubscriberEmail {
     }
 }
 #[cfg(test)]
-mod tests {
+mod tests { 
     use crate::domain::SubscriberEmail;
     use claim::{assert_err, assert_ok};
+    use fake::faker::internet::en::SafeEmail;
+    use fake::Fake;
     #[test]
     fn a_200_OK_result_indicates_success() {
         let result = SubscriberEmail::parse("ursula_le_guin@gmail.com".to_string());
@@ -36,4 +38,35 @@ mod tests {
         let result = SubscriberEmail::parse("ursula_le_guin@gmail".to_string());
         assert_err!(result);
     }
-}   
+    #[test]
+    fn empty_string_is_rejected() {
+        let result = SubscriberEmail::parse("".to_string());
+        assert_err!(result);
+    }
+    #[test]
+    fn email_missing_at_symbol_is_rejected() {
+        let result = SubscriberEmail::parse("ursulagmail.com".to_string());
+        assert_err!(result);
+    }
+    #[test]
+    fn email_missing_dot_is_rejected() {
+        let result = SubscriberEmail::parse("ursula@gmailcom".to_string());
+        assert_err!(result);
+    }
+    #[test]
+    fn valid_emails_are_parsed_successfully() {
+        let email = SafeEmail().fake();
+        assert_ok!(SubscriberEmail::parse(email));
+    }
+    #[test]
+    fn invalid_emails_are_rejected() {
+        let emails = vec![
+            "ursulagmail.com",      // 缺少 @ 符号
+            "ursula@gmailcom",      // 缺少域名点
+            "not-an-email",         // 完全无效
+       ];
+        for email in emails {
+            assert_err!(SubscriberEmail::parse(email.to_string()));
+        }
+    }
+}
