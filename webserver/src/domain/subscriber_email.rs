@@ -29,24 +29,49 @@ mod tests {
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
     use quickcheck::{Arbitrary, Gen};
-#[derive(Debug, Clone)]
-struct ValidEmailFixture(pub String);
+    
+    #[derive(Debug, Clone)]
+    struct ValidEmailFixture(pub String);
 
-impl Arbitrary for ValidEmailFixture {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let email = SafeEmail().fake();
-        Self(email)
+    impl Arbitrary for ValidEmailFixture {
+        // quickcheck 要求 "可生成随机数据的类型" 必须实现此 trait，arbitrary 方法定义了数据的生成规则。
+        fn arbitrary(_g: &mut Gen) -> Self {
+            let email = SafeEmail().fake();
+            Self(email)
+        }
     }
-}
 
-#[quickcheck_macros::quickcheck]
-fn valid_emails_are_parsed_successfully_quickcheck(valid_email: ValidEmailFixture) -> bool {
-    SubscriberEmail::parse(valid_email.0).is_ok()
-}
-#[quickcheck_macros::quickcheck]
-fn invalid_emails_are_rejected_quickcheck(invalid_email: ValidEmailFixture) -> bool {
-    SubscriberEmail::parse(invalid_email.0).is_err()
-}
+    #[derive(Debug, Clone)]
+    struct InvalidEmailFixture(pub String);
+
+    impl Arbitrary for InvalidEmailFixture {
+        // 生成无效邮箱的规则：随机选择预定义的无效邮箱模式
+        fn arbitrary(g: &mut Gen) -> Self {
+            // 预定义的无效邮箱模式列表
+            let invalid_patterns = vec![
+                "".to_string(),                    // 空字符串
+                "not-an-email".to_string(),        // 完全无效
+                "user".to_string(),                // 缺少 @ 和域名
+                "user@".to_string(),               // 缺少域名
+                "user@domain".to_string(),         // 缺少顶级域名
+                "userdomain.com".to_string(),      // 缺少 @
+                "@domain.com".to_string(),         // 缺少用户名
+            ];
+            // 使用索引选择，确保不会 panic
+            let index = (u32::arbitrary(g) % invalid_patterns.len() as u32) as usize;
+            Self(invalid_patterns[index].clone())
+        }
+    }
+
+    #[quickcheck_macros::quickcheck]
+    fn valid_emails_are_parsed_successfully_quickcheck(valid_email: ValidEmailFixture) -> bool {
+        SubscriberEmail::parse(valid_email.0).is_ok()
+    }
+
+    #[quickcheck_macros::quickcheck]
+    fn invalid_emails_are_rejected_quickcheck(invalid_email: InvalidEmailFixture) -> bool {
+        SubscriberEmail::parse(invalid_email.0).is_err()
+    }
     #[test]
     fn a_200_OK_result_indicates_success() {
         let result = SubscriberEmail::parse("ursula_le_guin@gmail.com".to_string());
@@ -87,14 +112,6 @@ fn invalid_emails_are_rejected_quickcheck(invalid_email: ValidEmailFixture) -> b
         for email in emails {
             assert_err!(SubscriberEmail::parse(email.to_string()));
         }
-    }
-    #[quickcheck_macros::quickcheck]
-    fn valid_emails_are_parsed_successfully_quickcheck(email: String) -> bool {
-        SubscriberEmail::parse(email).is_ok()
-    }
-    #[quickcheck_macros::quickcheck]
-    fn invalid_emails_are_rejected_quickcheck(email: String) -> bool {
-        SubscriberEmail::parse(email).is_err()
     }
 }
   
