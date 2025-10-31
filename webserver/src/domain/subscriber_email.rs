@@ -28,6 +28,8 @@ mod tests {
     use claim::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
+
+    
     #[test]
     fn a_200_OK_result_indicates_success() {
         let result = SubscriberEmail::parse("ursula_le_guin@gmail.com".to_string());
@@ -69,4 +71,13 @@ mod tests {
             assert_err!(SubscriberEmail::parse(email.to_string()));
         }
     }
+    #[quickcheck_macros::quickcheck]
+    fn valid_emails_are_parsed_successfully_quickcheck(email: String) -> bool {
+        SubscriberEmail::parse(email).is_ok()
+    }
+    #[quickcheck_macros::quickcheck]
+    fn invalid_emails_are_rejected_quickcheck(email: String) -> bool {
+        SubscriberEmail::parse(email).is_err()
+    }
 }
+  

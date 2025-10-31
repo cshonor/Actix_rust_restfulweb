@@ -23,6 +23,8 @@ unicode-segmentation = "1"
 claim = "0.5"
 fake = "2.3"
 validator = "0.14"
+quickcheck = "0.9.2"
+quickcheck_macros = "0.9.1"
 [lib]
 name = "webserver"
 path = "src/lib.rs"
