@@ -28,8 +28,25 @@ mod tests {
     use claim::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
+    use quickcheck::{Arbitrary, Gen};
+#[derive(Debug, Clone)]
+struct ValidEmailFixture(pub String);
 
-    
+impl Arbitrary for ValidEmailFixture {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let email = SafeEmail().fake();
+        Self(email)
+    }
+}
+
+#[quickcheck_macros::quickcheck]
+fn valid_emails_are_parsed_successfully_quickcheck(valid_email: ValidEmailFixture) -> bool {
+    SubscriberEmail::parse(valid_email.0).is_ok()
+}
+#[quickcheck_macros::quickcheck]
+fn invalid_emails_are_rejected_quickcheck(invalid_email: ValidEmailFixture) -> bool {
+    SubscriberEmail::parse(invalid_email.0).is_err()
+}
     #[test]
     fn a_200_OK_result_indicates_success() {
         let result = SubscriberEmail::parse("ursula_le_guin@gmail.com".to_string());
