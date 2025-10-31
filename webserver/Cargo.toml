@@ -26,6 +26,8 @@ secrecy = { version = "0.8" , features=["serde"] }
 unicode-segmentation = "1"
 
 claim = "0.5"
+
+validator = "0.14"
 [lib]
 name = "webserver"
 path = "src/lib.rs"

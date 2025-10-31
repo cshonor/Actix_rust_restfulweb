@@ -1,14 +1,15 @@
 use claim::{assert_err, assert_ok};
-
+use validator::Validate;
 #[derive(Debug)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
     pub fn parse(email: String) -> Result<SubscriberEmail, String> {
-        if !email.contains('@') || email.ends_with(".com") {
-            return Err("Email is not valid".to_string());
+        if validator::validate_email(&email) {
+            Ok(Self(email.to_lowercase()))
+        } else {
+            Err("Email is not valid".to_string())
         }
-        Ok(Self(email.to_lowercase()))
     }
 }
 impl AsRef<str> for SubscriberEmail {
