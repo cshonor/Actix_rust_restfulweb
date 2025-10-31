@@ -1,7 +1,8 @@
-use config::{Config, ConfigError, File, Environment as ConfigEnvironment};
-use serde::Deserialize;
+use config::Environment as ConfigEnvironment;
 use secrecy::{Secret, ExposeSecret};
 use serde_aux::field_attributes::deserialize_number_from_string;
+use sqlx::postgres::{PgSslMode, PgConnectOptions};
+use sqlx::ConnectOptions;
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
@@ -79,23 +80,25 @@ impl DatabaseSettings {
     pub fn connection_string_without_db(&self) -> Secret<String> {
         Secret::new(format!("postgres://{}:{}@{}:{}", self.username, self.password.expose_secret(), self.host.expose_secret(), self.port))
     }
-    pub fn without_db(&self) -> pgpooloptions::Builder {
+    pub fn without_db(&self) -> PgConnectOptions {
         let ssl_mode = if self.require_ssl {
-            pgpooloptions::SslMode::Require
+            PgSslMode::Require
         } else {
-            pgpooloptions::SslMode::Prefer
+            PgSslMode::Prefer
         };
-        pgpooloptions::Builder::new()
-        .host(&self.host.expose_secret())
-        .port(self.port)
-        .username(&self.username)
-        .password(&self.password.expose_secret())
-        .ssl_mode(ssl_mode)
+        PgConnectOptions::new()
+            .host(&self.host.expose_secret())
+            .port(self.port)
+            .username(&self.username)
+            .password(&self.password.expose_secret())
+            .ssl_mode(ssl_mode)
     }   
-    pub fn with_db(&self) -> pgpooloptions::Builder {
- let mut options =  self.without_db().database_name(&self.database_name.expose_secret());
- options.log_statements(tracing::log::LevelFilter::TRACE);
- options
 
+
+    pub fn with_db(&self) -> PgConnectOptions {
+        let mut options = self.without_db()
+            .database(&self.database_name.expose_secret());
+        options.log_statements(tracing::log::LevelFilter::Trace);
+        options
     }
 }   

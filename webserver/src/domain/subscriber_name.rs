@@ -1,5 +1,7 @@
 use claim::{assert_err, assert_ok};
 use unicode_segmentation::UnicodeSegmentation;
+
+
 #[derive(Debug)]
 pub struct SubscriberName(String);
 
@@ -24,6 +26,12 @@ impl AsRef<str> for SubscriberName {
     fn as_ref(&self) -> &str {
         //&self.0则是获取其不可变引用并返回。
         &self.0
+    }
+}
+
+impl std::fmt::Display for SubscriberName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
