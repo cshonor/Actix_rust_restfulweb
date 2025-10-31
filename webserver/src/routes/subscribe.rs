@@ -3,6 +3,8 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use sqlx::PgPool;
 use uuid::Uuid;
 use unicode_segmentation::UnicodeSegmentation;  
+use crate::domain::NewSubscriber;
+use crate::domain::SubscriberName;
 
 #[derive(Deserialize, Debug)]
 pub struct Subscriber {
@@ -20,7 +22,13 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
     if !is_valid_email(&form.email) {
         return HttpResponse::BadRequest().body("Invalid email").finish();
     }
-    match insert_subscriber(&db_pool, &form).await {
+    let new_subscriber = NewSubscriber {
+        //form.0：form是一个web::Form<Subscriber>类型的实例，它是一个元组结构体。
+        //正因为它是元组结构体，且内部只有一个字段（索引为0），所以必须通过.0来访问其内部真正的T实例（这里就是Subscriber）
+        email: form.0.email,
+        name: SubscriberName::parse(form.0.name),
+    };
+    match insert_subscriber(&db_pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
@@ -29,7 +37,7 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
 skip(form, db_pool),
 fields(email = %form.email,name = %form.name))]
 
-pub async fn insert_subscriber(db_pool: &PgPool, form:&Subscriber) -> Result<(), sqlx::Error> {
+pub async fn insert_subscriber(db_pool: &PgPool, form:&NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
     , Uuid::new_v4(), form.email, form.name, chrono::Utc::now())
     .execute(db_pool).await
