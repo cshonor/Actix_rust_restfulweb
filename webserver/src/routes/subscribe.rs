@@ -28,8 +28,10 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
         email: form.0.email,
         name: SubscriberName::parse(form.0.name).expect("Failed to parse subscriber name"),
     };
-    insert_subscriber(&db_pool, &new_subscriber).await.map_err(|_| HttpResponse::InternalServerError().finish())?;
-    HttpResponse::Ok().finish()
+   match insert_subscriber(&db_pool, &new_subscriber).await {
+    Ok(_) => HttpResponse::Ok().finish(),
+    Err(_) => HttpResponse::InternalServerError().finish(),
+   }
 }
 #[tracing::instrument(name = "Inserting a new subscriber", 
 skip(form, db_pool),

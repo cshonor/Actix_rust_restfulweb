@@ -1,4 +1,6 @@
 use claim::{assert_err, assert_ok};
+use unicode_segmentation::UnicodeSegmentation;
+#[derive(Debug)]
 pub struct SubscriberName(String);
 
 impl SubscriberName {
@@ -23,11 +25,6 @@ impl AsRef<str> for SubscriberName {
         //&self.0则是获取其不可变引用并返回。
         &self.0
     }
-}
-
-pub struct NewSubscriber {
-    pub email: SubscriberEmail,
-    pub name: SubscriberName,
 }
 
 #[cfg(test)]
