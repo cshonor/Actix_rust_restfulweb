@@ -39,7 +39,7 @@ fields(email = %form.email,name = %form.name))]
 
 pub async fn insert_subscriber(db_pool: &PgPool, form:&NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!("INSERT INTO subscriptions (id,email, name, subscribed_at) VALUES ($1, $2, $3, $4)"
-    , Uuid::new_v4(), form.email, form.name, chrono::Utc::now())
+    , Uuid::new_v4(), form.email, form.name.as_ref(), chrono::Utc::now())
     .execute(db_pool).await
     .map_err(|e| {
         tracing::error!("Failed to insert subscriber: {}", e);
