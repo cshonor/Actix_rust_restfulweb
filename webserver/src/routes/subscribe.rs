@@ -11,7 +11,23 @@ pub struct Subscriber {
     pub name: String,
     pub email: String,
 }
+#[tracing::instrument(name = "Converting a subscriber to a new subscriber", skip(subscriber))]
+impl TryFrom<Subscriber> for NewSubscriber {
+    type Error = String;
+    fn try_from(subscriber: Subscriber) -> Result<Self, Self::Error> {
+        let name= match SubscriberName::parse(subscriber.name) {
+            Ok(name) => name,
+            Err(_) => return Err("Invalid name".to_string()),
+        };
+        let email= match SubscriberEmail::parse(subscriber.email) {
+            Ok(email) => email,
+            Err(_) => return Err("Invalid email".to_string()),
+        };
+        Ok(NewSubscriber {email, name})
+    }
+}
 
+#[tracing::instrument(name = "Parsing a new subscriber", skip(form))]
 pub fn parse_subscriber(form: web::Form<Subscriber>) -> Result<NewSubscriber, String> {
     let name= match SubscriberName::parse(form.0.name) {
         Ok(name) => name,
@@ -23,13 +39,14 @@ pub fn parse_subscriber(form: web::Form<Subscriber>) -> Result<NewSubscriber, St
     };
     Ok(NewSubscriber {email, name})
 }   
+
 #[tracing::instrument(
     name = "Adding a new subscriber", 
     skip(form, db_pool),
     fields(email = %form.email,name = %form.name))]
 pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: web::Data<PgPool>) -> impl Responder {
-    let new_subscriber =  match parse_subscriber(form) {
-        Ok(new_subscriber) => new_subscriber,
+    let new_subscriber =  match form.0.try_into() {
+        Ok(subscriber) => subscriber,
         Err(e) => return HttpResponse::BadRequest().body(e),
     };
     match insert_subscriber(&db_pool, &new_subscriber).await {
@@ -37,6 +54,7 @@ pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: w
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
+
 #[tracing::instrument(name = "Inserting a new subscriber", 
 skip(form, db_pool))]
 
@@ -51,14 +69,3 @@ pub async fn insert_subscriber(db_pool: &PgPool, form:&NewSubscriber) -> Result<
     Ok(())
 }
 
-pub fn is_valid_name(name: &str) -> bool {
-    let is_empty_or_whitespace = name.trim().is_empty();
-    let is_too_long = name.graphemes(true).count() > 256;
-    let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-    let contains_forbidden_characters = name.chars().any(|c| forbidden_characters.contains(&c));
-    !(is_empty_or_whitespace || is_too_long || contains_forbidden_characters)
-}
-pub fn is_valid_email(email: &str) -> bool {
-    let email = email.trim();
-    email.contains('@') && email.ends_with(".com")
-}
