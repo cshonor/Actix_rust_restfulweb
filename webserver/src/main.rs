@@ -19,7 +19,7 @@ async fn main() -> std::io::Result<()> {
 
     let email_client_settings = settings.email_client.sender().expect("Invalid sender email");
 
-    let email_client = EmailClient::new(email_client_settings, Client::new(), settings.email_client.base_url);
+    let email_client = EmailClient::new(email_client_settings, Client::new(), settings.email_client.base_url, settings.email_client.authorization_token);
 
     let listener=TcpListener::bind(format!("{}:{}", settings.application.host, settings.application.port)).expect("Failed to bind port");
    
