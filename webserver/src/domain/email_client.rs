@@ -140,7 +140,11 @@ mod tests {
         assert_err!(result);
     }
 //SendEmailMatcher 是一个自定义的 WireMock 匹配器，用于验证 HTTP 请求的请求体是否符合预期
-    struct SendEmailMatcher {
+#[derive(Debug, Clone)]
+#[serde(rename_all = "pascal_case")]
+//#[serde(rename_all = "pascal_case")] 用于将 JSON 字段名转换为 PascalCase 格式
+//#[derive(Debug, Clone)] 用于将 SendEmailMatcher 类型转换为 Debug 和 Clone 类型
+struct SendEmailMatcher {
         from: String,
         to: String,
         subject: String,
