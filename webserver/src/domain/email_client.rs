@@ -139,4 +139,64 @@ mod tests {
         .mount(&mock_server);
         assert_err!(result);
     }
+//SendEmailMatcher 是一个自定义的 WireMock 匹配器，用于验证 HTTP 请求的请求体是否符合预期
+    struct SendEmailMatcher {
+        from: String,
+        to: String,
+        subject: String,
+        html_body: String,
+        text_body: String,
+    }
+    impl wiremock::Match for SendEmailMatcher {
+        fn matches(&self, request: &wiremock::Request) -> bool {
+            //将请求体转换为 JSON
+            let request_as_json : Result<serde_json::Value, serde_json::Error>
+             = serde_json::from_slice(request.body);// 注意：request.body 是 &[u8]
+             //如果请求体转换为 JSON 成功，则判断请求体是否与预期一致 body是serde_json::value::Value类型
+             if let Ok(body) = request_as_json {
+                //检查 JSON 是否包含 from、to、subject、html_body、text_body字段
+                body.get("from").is_some() &&
+                body.get("to").is_some() &&// 检查 JSON 是否包含 to 字段        
+                body.get("subject").is_some() &&// 检查 JSON 是否包含 subject 字段
+                body.get("html_body").is_some() &&// 检查 JSON 是否包含 html_body 字段
+                body.get("text_body").is_some()// 检查 JSON 是否包含 text_body 字段
+             }else{
+                //如果请求体转换为 JSON 失败，则返回 false
+                false
+             }
+        }
+        fn describe(&self) -> String {
+            format!("matches a request with from: {}, to: {}, subject: {}, html_body: {}, text_body: {}", self.from, self.to, self.subject, self.html_body, self.text_body)
+        }
+    }
+
+
+    #[tokio::test]
+    async fn send_email_succeeds_if_the_server_returns_200() {
+        let _ = init();
+        let mock_server = MockServer::start().await;
+        let email_client = EmailClient::new(
+            SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
+            Client::new(),
+            mock_server.uri(),
+            Secret::new(Faker.fake::<String>()),
+        );
+        wiremock::Mock::given(method("POST"))
+        .and(path("/email"))
+        .and(header_exists("Authorization"))
+        .and(header("Content-Type", "application/json"))
+        .and(SendEmailMatcher {
+            from: sender.as_ref().to_string(),
+            to: recipient.as_ref().to_string(),
+            subject: subject.clone(),
+            html_body: html_content.clone(),
+            text_body: text_content.clone(),
+        })//SendEmailMatcher 用于匹配请求体
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&mock_server)
+        .await;
+        let result = email_client.send_email(email_client.recipient, &email_client.subject, &email_client.html_body, &email_client.text_body).await;
+        assert_ok!(result);
+    }
 }
