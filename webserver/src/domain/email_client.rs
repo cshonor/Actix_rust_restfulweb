@@ -48,6 +48,7 @@ mod tests {
         let email_client = EmailClient::new(
             SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
             Client::new(),
+            //模拟服务器的 URI
             mock_server.uri(),
         );
 
@@ -60,15 +61,13 @@ mod tests {
         .mount(&mock_server)
         .await;//挂载到模拟服务器
         // 4. 发送邮件  
-        let _ = email_client.send_email(
-            SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
-            "subject".into(),
-            "content".into(),
-            "text_content".into(),
-        ).await.unwrap();
+        //发送邮件的参数：接收者、主题、HTML 内容、文本内容
 
-        // 5. 验证请求是否发送
-        let request_sent = request_was_sent(&mock_server).await;
-        assert!(request_sent);
+        let recipient = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
+        let subject = sentence(1..2).fake::<String>();
+        let html_content = paragraph(1..2).fake::<String>();
+        let text_content = paragraph(1..2).fake::<String>();
+        //发送邮件
+        let _ = email_client.send_email(recipient, &subject, &html_content, &text_content).await.unwrap();
     }
 }
