@@ -154,6 +154,9 @@ mod tests {
              = serde_json::from_slice(request.body);// 注意：request.body 是 &[u8]
              //如果请求体转换为 JSON 成功，则判断请求体是否与预期一致 body是serde_json::value::Value类型
              if let Ok(body) = request_as_json {
+                //打印请求体 dbg!是 Rust 标准库提供的一个宏，用于方便地调试代码。
+                // 它会将传入的参数的值打印到标准错误输出（stderr），同时还会输出该代码所在的文件名和行号等信息，有助于快速定位代码中的问题。
+                dbg!(&body);
                 //检查 JSON 是否包含 from、to、subject、html_body、text_body字段
                 body.get("from").is_some() &&
                 body.get("to").is_some() &&// 检查 JSON 是否包含 to 字段        
