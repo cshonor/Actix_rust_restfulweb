@@ -8,10 +8,19 @@ pub struct EmailClient {
     base_url: String,
     authorization_token: Secret<String>,
 }
+#[derive(serde::Serialize)]
+struct SendEmailRequest<'a> {
+    //'a 是 lifetime 参数，用于表示请求的生命周期
+    from: &'a str,
+    to: &'a str,
+    subject: &'a str,
+    html_body: &'a str,
+    text_body: &'a str,
+}
 
 impl EmailClient {
-    pub fn new(sender: SubscriberEmail, client: Client, base_url: String, authorization_token: Secret<String>) -> Self {
-        Self { sender, client :Client::new(), base_url, authorization_token }
+    pub fn new(sender: SubscriberEmail, base_url: String, authorization_token: Secret<String>) -> Self {
+        Self { sender, client: Client::new(), base_url, authorization_token }
     }
 }
 
@@ -20,11 +29,12 @@ impl EmailClient {
         let url = format!("{}/email", self.base_url);
         //创建请求
         let request = SendEmailRequest::new(
-          from: self.sender.as_ref().to_string(),
-          to: recipient.as_ref().to_owned(),
-          subject: subject.to_owned(),
-          html_body: html_content.to_owned(),
-          text_body: text_content.to_owned(),
+          //as_ref() 用于将 SubscriberEmail 转换为 &str
+          self.sender.as_ref(),
+          recipient.as_ref(),
+          subject,
+          html_content,
+          text_content,
         );
         let buffer = self.client
         .post(url)
@@ -39,17 +49,9 @@ impl EmailClient {
         }
     }
 }
-#[derive(serde::Serialize)]
-struct SendEmailRequest {
-    from: String,
-    to: String,
-    subject: String,
-    html_body: String,
-    text_body: String,
-}
 
-impl SendEmailRequest {
-    pub fn new(from: String, to: String, subject: String, html_body: String, text_body: String) -> Self {
+impl<'a> SendEmailRequest<'a> {
+    pub fn new(from: &'a str, to: &'a str, subject: &'a str, html_body: &'a str, text_body: &'a str) -> Self {
         Self { from, to, subject, html_body, text_body }
     }
 }
@@ -58,12 +60,13 @@ mod tests {
     use super::*;
     use claim::{assert_ok, assert_err};
     use fake::{Fake, Faker};
+    use fake::faker::lorem::en::{Sentence, Paragraph};
     use rand::{rngs::StdRng, SeedableRng};
     use std::sync::Once;
-    use wiremock::{MockServer, ResponseTemplate};
+    use wiremock::{MockServer, ResponseTemplate, Mock};
     use fake::faker::internet::en::SafeEmail;
     use crate::routes::telemetry::{get_subscriber, init_subscriber};
-    use wiremock::matchers::{method, path};
+    use wiremock::matchers::{method, path, header, header_exists, body_json};
 
     static TRACING: Once = Once::new();
     
@@ -82,7 +85,6 @@ mod tests {
         // 2. 创建一个邮件客户端
         let email_client = EmailClient::new(
             SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
-            Client::new(),
             //模拟服务器的 URI
             mock_server.uri(),
             Secret::new(Faker.fake::<String>()),
@@ -100,9 +102,9 @@ mod tests {
         //发送邮件的参数：接收者、主题、HTML 内容、文本内容
 
         let recipient = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let subject = sentence(1..2).fake::<String>();
-        let html_content = paragraph(1..2).fake::<String>();
-        let text_content = paragraph(1..2).fake::<String>();
+        let subject: String = Sentence(1..2).fake();
+        let html_content: String = Paragraph(1..2).fake();
+        let text_content: String = Paragraph(1..2).fake();
         //发送邮件
         let _ = email_client.send_email(recipient, &subject, &html_content, &text_content).await.unwrap();
     }
@@ -113,16 +115,20 @@ mod tests {
         let mock_server = MockServer::start().await;
         let email_client = EmailClient::new(
             SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
-            Client::new(),
             mock_server.uri(),
             Secret::new(Faker.fake::<String>()),
         );
         let recipient = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let subject = sentence(1..2).fake::<String>();
-        let html_content = paragraph(1..2).fake::<String>();
-        let text_content = paragraph(1..2).fake::<String>();    
-        let result = email_client.send_email(recipient, &subject, &html_content, &text_content).await;
-       
+        let subject: String = Sentence(1..2).fake();
+        let html_content: String = Paragraph(1..2).fake();
+        let text_content: String = Paragraph(1..2).fake();   
+        let request = SendEmailRequest::new(
+            email_client.sender.as_ref(),
+            recipient.as_ref(),
+            &subject,
+            &html_content,
+            &text_content,
+        );
         //模拟请求 header_exists("Authorization") 用于在 WireMock 中验证请求头是否存在（不检查值）。
         //header("Content-Type", "application/json") 用于在 WireMock 中验证请求头 Content-Type 的值为 "application/json"。
         //body_json(request) 用于在 WireMock 中验证请求体是否为 JSON 格式。
@@ -132,11 +138,13 @@ mod tests {
         //mount(&mock_server) 用于在 WireMock 中挂载模拟服务器。
         Mock::given(header_exists("Authorization"))
         .and(header("Content-Type", "application/json"))
-        .and(body_json(request))
+        .and(body_json(&request))
         .and(path("/email"))
         .respond_with(ResponseTemplate::new(500))
         .expect(1)
-        .mount(&mock_server);
+        .mount(&mock_server)
+        .await;
+        let result = email_client.send_email(recipient, &subject, &html_content, &text_content).await;
         assert_err!(result);
     }
 //SendEmailMatcher 是一个自定义的 WireMock 匹配器，用于验证 HTTP 请求的请求体是否符合预期
@@ -144,14 +152,14 @@ mod tests {
 #[serde(rename_all = "pascal_case")]
 //#[serde(rename_all = "pascal_case")] 用于将 JSON 字段名转换为 PascalCase 格式
 //#[derive(Debug, Clone)] 用于将 SendEmailMatcher 类型转换为 Debug 和 Clone 类型
-struct SendEmailMatcher {
-        from: String,
-        to: String,
-        subject: String,
-        html_body: String,
-        text_body: String,
+struct SendEmailMatcher<'a> {
+        from: &'a str,
+        to: &'a str,
+        subject: &'a str,
+        html_body: &'a str,
+        text_body: &'a str,
     }
-    impl wiremock::Match for SendEmailMatcher {
+    impl<'a> wiremock::Match for SendEmailMatcher<'a> {
         fn matches(&self, request: &wiremock::Request) -> bool {
             //将请求体转换为 JSON
             let request_as_json : Result<serde_json::Value, serde_json::Error>
@@ -182,28 +190,32 @@ struct SendEmailMatcher {
     async fn send_email_succeeds_if_the_server_returns_200() {
         let _ = init();
         let mock_server = MockServer::start().await;
+        let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
         let email_client = EmailClient::new(
-            SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
-            Client::new(),
+            sender.clone(),
             mock_server.uri(),
             Secret::new(Faker.fake::<String>()),
         );
-        wiremock::Mock::given(method("POST"))
+        let recipient = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
+        let subject: String = Sentence(1..2).fake();
+        let html_content: String = Paragraph(1..2).fake();
+        let text_content: String = Paragraph(1..2).fake();
+        Mock::given(method("POST"))
         .and(path("/email"))
         .and(header_exists("Authorization"))
         .and(header("Content-Type", "application/json"))
         .and(SendEmailMatcher {
-            from: sender.as_ref().to_string(),
-            to: recipient.as_ref().to_string(),
-            subject: subject.clone(),
-            html_body: html_content.clone(),
-            text_body: text_content.clone(),
+            from: sender.as_ref(),
+            to: recipient.as_ref(),
+            subject: &subject,
+            html_body: &html_content,
+            text_body: &text_content,
         })//SendEmailMatcher 用于匹配请求体
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&mock_server)
         .await;
-        let result = email_client.send_email(email_client.recipient, &email_client.subject, &email_client.html_body, &email_client.text_body).await;
+        let result = email_client.send_email(recipient, &subject, &html_content, &text_content).await;
         assert_ok!(result);
     }
 }
