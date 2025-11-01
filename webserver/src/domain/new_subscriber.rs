@@ -1,5 +1,4 @@
 use crate::domain::SubscriberEmail;
-
 use crate::domain::SubscriberName;
 use claim::{assert_err, assert_ok};
 

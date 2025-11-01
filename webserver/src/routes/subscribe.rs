@@ -11,22 +11,26 @@ pub struct Subscriber {
     pub name: String,
     pub email: String,
 }
+
+pub fn parse_subscriber(form: web::Form<Subscriber>) -> Result<NewSubscriber, String> {
+    let name= match SubscriberName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(_) => return Err("Invalid name".to_string()),
+    };
+    let email= match SubscriberEmail::parse(form.0.email) {
+        Ok(email) => email,
+        Err(_) => return Err("Invalid email".to_string()),
+    };
+    Ok(NewSubscriber {email, name})
+}   
 #[tracing::instrument(
     name = "Adding a new subscriber", 
     skip(form, db_pool),
     fields(email = %form.email,name = %form.name))]
 pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: web::Data<PgPool>) -> impl Responder {
-    if !is_valid_name(&form.name) {
-        return HttpResponse::BadRequest().body("Invalid name");
-    }
-    if !is_valid_email(&form.email) {
-        return HttpResponse::BadRequest().body("Invalid email");
-    }
-    let new_subscriber = NewSubscriber {
-        //form.0：form是一个web::Form<Subscriber>类型的实例，它是一个元组结构体。
-        //正因为它是元组结构体，且内部只有一个字段（索引为0），所以必须通过.0来访问其内部真正的T实例（这里就是Subscriber）
-        email: SubscriberEmail::parse(form.0.email).expect("Failed to parse subscriber email"),
-        name: SubscriberName::parse(form.0.name).expect("Failed to parse subscriber name"),
+    let new_subscriber =  match parse_subscriber(form) {
+        Ok(new_subscriber) => new_subscriber,
+        Err(e) => return HttpResponse::BadRequest().body(e),
     };
     match insert_subscriber(&db_pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),

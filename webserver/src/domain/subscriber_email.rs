@@ -44,9 +44,12 @@ mod tests {
     #[derive(Debug, Clone)]
     struct InvalidEmailFixture(pub String);
 
+    // 必须实现 Arbitrary trait，才能使用 quickcheck 进行随机测试
     impl Arbitrary for InvalidEmailFixture {
-        // 生成无效邮箱的规则：随机选择预定义的无效邮箱模式
+        // 生成无效邮箱的规则：随机选择预定义的无效邮箱模式 
+        // arbitrary 方法定义数据生成规则
         fn arbitrary(g: &mut Gen) -> Self {
+            // 生成一个随机索引，确保不会 panic 通过 Gen 参数生成随机数据
             // 预定义的无效邮箱模式列表
             let invalid_patterns = vec![
                 "".to_string(),                    // 空字符串
