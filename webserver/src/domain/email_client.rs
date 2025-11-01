@@ -18,3 +18,38 @@ impl EmailClient {
         todo!()
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use claim::{assert_ok, assert_err};
+    use fake::{Fake, Faker};
+    use rand::{rngs::StdRng, SeedableRng};
+    use std::sync::Once;
+    use wiremock::{MockServer, ResponseTemplate};
+    use fake::faker::internet::en::SafeEmail;
+    static TRACING: Once = Once::new();
+    
+    fn init() {
+        TRACING.call_once(|| {
+            let subscriber = get_subscriber("test".into(), "info".into(), std::io::stdout());
+            init_subscriber(subscriber);
+        });
+    }
+
+    #[tokio::test]
+    async fn send_email_sends_the_expected_request() {
+        let _ = init();
+        let mock_server = MockServer::start().await;
+        let email_client = EmailClient::new(
+            SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
+            Client::new(),
+            mock_server.uri(),
+        );
+        let response = email_client.send_email(
+            SubscriberEmail::parse(SafeEmail().fake()).unwrap(),
+            "subject".to_string(),
+            "content".to_string(),
+        ).await;
+        assert_ok!(response);
+    }
+}
