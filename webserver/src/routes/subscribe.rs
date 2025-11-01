@@ -12,14 +12,23 @@ pub struct Subscriber {
     pub email: String,
 }
 #[tracing::instrument(name = "Converting a subscriber to a new subscriber", skip(subscriber))]
+
+//TryFrom<Subscriber> for NewSubscriber 表示：将 Subscriber 类型转换为 NewSubscriber 类型
 impl TryFrom<Subscriber> for NewSubscriber {
+    //Subscriber：源类型（未验证的原始数据）
+    //NewSubscriber：目标类型（已验证的规范化数据）
+    //Error：错误类型（转换失败时的错误信息）
     type Error = String;
     fn try_from(subscriber: Subscriber) -> Result<Self, Self::Error> {
+        //SubscriberName::parse 返回 Result<SubscriberName, String>
+        //SubscriberName::parse 返回 Result<SubscriberName, String> ，如果解析失败，则返回 Err("Invalid name".to_string())
         let name= match SubscriberName::parse(subscriber.name) {
             Ok(name) => name,
             Err(_) => return Err("Invalid name".to_string()),
         };
         let email= match SubscriberEmail::parse(subscriber.email) {
+            //SubscriberEmail::parse 返回 Result<SubscriberEmail, String>
+            //SubscriberEmail::parse 返回 Result<SubscriberEmail, String> ，如果解析失败，则返回 Err("Invalid email".to_string())
             Ok(email) => email,
             Err(_) => return Err("Invalid email".to_string()),
         };
@@ -46,6 +55,8 @@ pub fn parse_subscriber(form: web::Form<Subscriber>) -> Result<NewSubscriber, St
     fields(email = %form.email,name = %form.name))]
 pub async fn subscribe(_req: HttpRequest, form: web::Form<Subscriber>,db_pool: web::Data<PgPool>) -> impl Responder {
     let new_subscriber =  match form.0.try_into() {
+        //form.0.try_into() 等价于： TryFrom::try_from(form.0)
+
         Ok(subscriber) => subscriber,
         Err(e) => return HttpResponse::BadRequest().body(e),
     };
