@@ -15,7 +15,34 @@ impl EmailClient {
 
 impl EmailClient {
     pub async fn send_email(&self, recipient: SubscriberEmail, subject: &str, html_content: &str, text_content: &str) -> Result<(), String> {
-        todo!()
+        let url = format!("{}/email", self.base_url);
+        //创建请求
+        let request = SendEmailRequest::new(
+          from: self.sender.as_ref().to_owned(),
+          to: recipient.as_ref().to_owned(),
+          subject: subject.to_owned(),
+          html_body: html_content.to_owned(),
+          text_body: text_content.to_owned(),
+        );
+        let buffer = self.client.post(url).json(&request).send().await.unwrap();
+        match buffer.error_for_status() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+
+struct SendEmailRequest {
+    from: SubscriberEmail,
+    to: SubscriberEmail,
+    subject: String,
+    html_body: String,
+    text_body: String,
+}
+
+impl SendEmailRequest {
+    pub fn new(from: SubscriberEmail, to: SubscriberEmail, subject: String, html_body: String, text_body: String) -> Self {
+        Self { from, to, subject, html_body, text_body }
     }
 }
 #[cfg(test)]
