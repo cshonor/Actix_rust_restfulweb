@@ -3,16 +3,20 @@ use secrecy::{Secret, ExposeSecret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgSslMode, PgConnectOptions};
 use sqlx::ConnectOptions;
+use crate::domain::subscriber_email::SubscriberEmail;
+
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub email_client: EmailClientSettings,
 }
 
 #[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
     pub username: String,
     pub password: Secret<String>,
+    //这个属性让 Serde 从字符串反序列化为数字类型，特别适用于配置文件和环境变量。
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: Secret<String>,
@@ -25,6 +29,13 @@ pub struct ApplicationSettings {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    pub sender_email: String,
+
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -102,3 +113,10 @@ impl DatabaseSettings {
         options
     }
 }   
+
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        //map_err(|e| e.to_string()) 用于将错误转换为字符串
+        SubscriberEmail::parse(self.sender_email.clone()).map_err(|e| e.to_string())
+    }
+}
